@@ -1,52 +1,144 @@
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class PlayerControllermidterm : MonoBehaviour
 {
-    [Header("이동 설정")]
     public float moveSpeed = 5.0f;
-    
-    [Header("점프 설정")]
+
     public float jumpForce = 10.0f;
     
+    // Animator 컴포넌트 참조 (private - Inspector에 안 보임)
+    private Animator animator;
+    private SpriteRenderer spriteRenderer;
     private Rigidbody2D rb;
     private bool isGrounded = false;
-    private int score = 0;  // 점수 추가
+    private int score = 0;
 
+    //리스폰용 시작 위치
     private Vector3 startPosition;
     
     void Start()
     {
+    
+        // 게임 시작 시 한 번만 - Animator 컴포넌트 찾아서 저장
+        animator = GetComponent<Animator>();
+        spriteRenderer = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
-        
         // 게임 시작 시 위치를 저장 - 새로 추가!
         startPosition = transform.position;
         Debug.Log("시작 위치 저장: " + startPosition);
+
+        
+        // 디버그: 제대로 찾았는지 확인
+        if (animator != null)
+        {
+            Debug.Log("Animator 컴포넌트를 찾았습니다!");
+        }
+        else
+        {
+            Debug.LogError("Animator 컴포넌트가 없습니다!");
+        }
+
+        if (spriteRenderer != null)
+        {
+            Debug.Log("SpriteRenderer 컴포넌트를 찾았습니다!");
+        }
+        else
+        {
+            Debug.LogError("SpriteRenderer 컴포넌트가 없습니다!");
+        }
+
+        if (rb != null)
+        {
+            Debug.Log("Rigidbody2D 컴포넌트를 찾았습니다!");
+        }
+        else
+        {
+            Debug.LogError("Rigidbody2D 컴포넌트가 없습니다!");
+        }
     }
+
     void Update()
     {
-        // 좌우 이동
+        // 이동 벡터 계산
         float moveX = 0f;
-        if (Input.GetKey(KeyCode.A)) moveX = -1f;
-        if (Input.GetKey(KeyCode.D)) moveX = 1f;
-        
-        rb.linearVelocity = new Vector2(moveX * moveSpeed, rb.linearVelocity.y);
-        
-        // 점프 (지난 시간에 배운 내용)
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
+
+        // A키 (왼쪽) - 스프라이트 뒤집기
+        if (Input.GetKey(KeyCode.A))
         {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            moveX = -1f;
+            spriteRenderer.flipX = true; // X축 뒤집기
+
+        }
+
+        // D키 (오른쪽) - 원래 방향
+        if (Input.GetKey(KeyCode.D))
+        {
+            moveX = 1f;
+            spriteRenderer.flipX = false; // 원래 크기
+
+        }
+
+        // if (Input.GetKey(KeyCode.W))
+        //{
+        //  movement += Vector3.up;
+        //}
+
+        //if (Input.GetKey(KeyCode.S))
+        //{
+        //  movement += Vector3.down;
+        //}
+
+        // 달리기 속도 계산
+        float currentMoveSpeed = moveSpeed;
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            currentMoveSpeed = moveSpeed * 2f;
+            Debug.Log("달리기 모드 활성화!");
+        }
+
+        //물리 기반 이동
+        rb.linearVelocity = new Vector2(moveX * currentMoveSpeed, rb.linearVelocity.y);
+
+
+        // 속도 계산: 이동 중이면 moveSpeed, 아니면 0
+        float currentSpeed = Mathf.Abs(rb.linearVelocity.x);
+
+        // Animator에 속도 전달
+        if (animator != null)
+        {
+            animator.SetFloat("Speed", currentSpeed);
+            Debug.Log("Current Speed: " + currentSpeed);
+        }
+
+        // 점프 입력 (한 번만 실행되어야 하므로 GetKeyDown!)
+        if (Input.GetKeyDown(KeyCode.Space)&&isGrounded)
+        {
+            if (animator != null)
+            {
+                animator.SetTrigger("Jump");
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+                Debug.Log("점프!");
+            }
+        }
+    }
+    void OnCollisionEnter2D(Collision2D collision)
+    {
+        // 충돌한 오브젝트가 "Ground" Tag를 가지고 있는지 확인
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            Debug.Log("바닥에 착지!");
+            isGrounded = true;
         }
     }
 
-    // 바닥 충돌 감지 (Collision)
-    void OnCollisionEnter2D(Collision2D collision)
+    void OnCollisionExit2D(Collision2D collision)
     {
-        // 바닥 충돌 감지 (기존 코드)
         if (collision.gameObject.CompareTag("Ground"))
         {
-            isGrounded = true;
+            Debug.Log("바닥에서 떨어짐");
+            isGrounded = false;
         }
-
         // 장애물 충돌 감지 - 새로 추가!
         if (collision.gameObject.CompareTag("Obstacle"))
         {
@@ -59,16 +151,8 @@ public class PlayerControllermidterm : MonoBehaviour
             rb.linearVelocity = new Vector2(0, 0);
         }
     }
-    
-    void OnCollisionExit2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            isGrounded = false;
-        }
-    }
 
-    // 아이템 수집 감지 (Trigger)
+    //아이템 수집 감지(Trigger)
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Coin"))
@@ -78,6 +162,7 @@ public class PlayerControllermidterm : MonoBehaviour
             Destroy(other.gameObject);  // 코인 제거
         }
 
+        // 골 도달 - 새로 추가!
         if (other.CompareTag("Goal"))
         {
             Debug.Log("🎉🎉🎉 게임 클리어! 🎉🎉🎉");
@@ -86,6 +171,7 @@ public class PlayerControllermidterm : MonoBehaviour
             // 캐릭터 조작 비활성화
             enabled = false;
         }
+
     }
-       
+
 }
