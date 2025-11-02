@@ -1,8 +1,8 @@
-using System.Runtime.CompilerServices;
 using UnityEngine;
 
 public class PlayerControllermidterm : MonoBehaviour
 {
+    [Header("이동 설정")]
     public float moveSpeed = 5.0f;
 
     public float jumpForce = 10.0f;
@@ -127,19 +127,11 @@ public class PlayerControllermidterm : MonoBehaviour
         // 충돌한 오브젝트가 "Ground" Tag를 가지고 있는지 확인
         if (collision.gameObject.CompareTag("Ground"))
         {
-            Debug.Log("바닥에 착지!");
             isGrounded = true;
+            Debug.Log("바닥에 착지!");
         }
-    }
 
-    void OnCollisionExit2D(Collision2D collision)
-    {
-        if (collision.gameObject.CompareTag("Ground"))
-        {
-            Debug.Log("바닥에서 떨어짐");
-            isGrounded = false;
-        }
-        // 장애물 충돌 감지 - 새로 추가!
+         // 장애물 충돌 감지 - 새로 추가!
         if (collision.gameObject.CompareTag("Obstacle"))
         {
             Debug.Log("⚠️ 장애물 충돌! 시작 지점으로 돌아갑니다.");
@@ -150,6 +142,16 @@ public class PlayerControllermidterm : MonoBehaviour
             // 속도 초기화 (안 하면 계속 날아감)
             rb.linearVelocity = new Vector2(0, 0);
         }
+    }
+
+    void OnCollisionExit2D(Collision2D collision)
+    {
+        if (collision.gameObject.CompareTag("Ground"))
+        {
+            isGrounded = false;
+            Debug.Log("바닥에서 떨어짐");
+        }
+
     }
 
     //아이템 수집 감지(Trigger)
